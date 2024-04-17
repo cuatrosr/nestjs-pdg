@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.tmp
+.idea
+.env.local
+coverage/
+.npm
+.pnpm-store
+.vscode
+.nyc_output
