@@ -10,6 +10,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from '@/app.module';
 import { MyLogger } from '@/logger/logger.service';
 import { HttpExceptionFilter } from '@/utils/filters/http-exception.filter';
+import { SocketAdapter } from '@/websockets/socket.adapter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -19,7 +20,13 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const port = configService.get<string>('PORT');
+  const wsPort = configService.get<number>('WEBSOCKET_PORT');
 
+  app.enableCors({
+    origin: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       validateCustomDecorators: true,
@@ -29,7 +36,13 @@ async function bootstrap() {
     }),
   );
   app.useLogger(new MyLogger());
-  app.useGlobalFilters(new HttpExceptionFilter(app.get(HttpAdapterHost)));
+  app.useGlobalFilters(
+    new HttpExceptionFilter(
+      await app.resolve(MyLogger),
+      app.get(HttpAdapterHost),
+    ),
+  );
+  app.useWebSocketAdapter(new SocketAdapter(app, configService));
 
   const config = new DocumentBuilder()
     .setTitle('Calipso Analytics Back')
@@ -46,6 +59,7 @@ async function bootstrap() {
 
   const logger = new Logger('Bootstrap');
   logger.log(`App is ready and listening on port ${port} 🚀`);
+  logger.log(`WebSocket is ready and listening on port ${wsPort} 🚀`);
 }
 bootstrap().catch(error => {
   // eslint-disable-next-line no-console

@@ -7,9 +7,16 @@ import {
 import { HttpAdapterHost } from '@nestjs/core';
 import { FastifyReply, FastifyRequest } from 'fastify';
 
+import { MyLogger } from '@/logger/logger.service';
+
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
-  constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
+  constructor(
+    private logger: MyLogger,
+    private readonly httpAdapterHost: HttpAdapterHost,
+  ) {
+    this.logger.setContext(HttpExceptionFilter.name);
+  }
 
   catch(exception: HttpException, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -18,15 +25,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const status = exception.getStatus();
 
     const adapter = this.httpAdapterHost.httpAdapter;
-    adapter.reply(
-      response,
-      {
-        statusCode: status,
-        message: exception.message,
-        timestamp: new Date().toISOString(),
-        path: request.url,
-      },
-      status,
-    );
+    const message = {
+      statusCode: status,
+      message: exception.message,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+    };
+    this.logger.error(message);
+    adapter.reply(response, message, status);
   }
 }
