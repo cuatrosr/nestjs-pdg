@@ -1,3 +1,3 @@
 pnpm build
-find dist/src/main.js
+find dist/main.js
 pnpm test
